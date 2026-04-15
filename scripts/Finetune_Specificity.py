@@ -38,6 +38,39 @@ from DTEA_model import (
 from Global_parameters import PROJ_HOME
 
 
+def load_discriminator_checkpoint(model, ckpt_path, device):
+    old_sd = torch.load(ckpt_path, map_location=device)
+    new_sd = model.state_dict()
+    to_load = {}
+    # remap old_key -> new key by stripping "predictor."
+    def remap_key(k):
+        if k.startswith("predictor."):
+            return k[len("predictor."):]
+        return k
+    for sd_key, sd_value in old_sd.items():
+        new_key = remap_key(sd_key)
+        if new_key in model.state_dict():
+            if "rotary.cos_emb" in new_key or "rotary.sin_emb" in new_key:
+                if old_sd[sd_key].shape == new_sd[new_key].shape:
+                    to_load[new_key] = old_sd[sd_key]
+                else:
+                    print(f"Shape mismatch, skipping: {new_key} (ckpt {old_sd[sd_key].shape} vs model {new_sd[new_key].shape})")
+                    continue
+            else:
+                if old_sd[sd_key].shape == new_sd[new_key].shape:
+                    to_load[new_key] = old_sd[sd_key]
+                else:
+                    print(f"Shape mismatch, skipping: {new_key} (ckpt {old_sd[sd_key].shape} vs model {new_sd[new_key].shape})")
+                    continue
+        else:
+            print(f"{new_key} not found in checkpoint.")
+            continue
+    missing, unexpected = model.load_state_dict(to_load, strict=False)
+    print(f"Loaded {len(new_sd)} tensors from {ckpt_path}")
+    print("missing:", missing)
+    print("unexpected:", unexpected)
+    return model
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 1.  Dataset — each sample has target mRNA, true miRNA, and K negative mRNAs
 # ══════════════════════════════════════════════════════════════════════════════
@@ -54,7 +87,7 @@ class SpecificityDataset(Dataset):
       neg_mrna_ids, neg_mrna_masks        — (K, L) negative mRNAs
     """
 
-    def __init__(self, df_pos, df_neg_pool, tokenizer, mrna_max_len, mirna_max_len, K=3):
+    def __init__(self, df_pos, df_neg_pool, tokenizer, mrna_max_len, mirna_max_len, K=5):
         """
         df_pos:      DataFrame of positive pairs (label=1)
         df_neg_pool: DataFrame to sample negative mRNAs from (can be label=0 rows
@@ -90,7 +123,7 @@ class SpecificityDataset(Dataset):
         # K negative mRNAs (random from pool, excluding the target)
         target_gene = str(row["gene"])
         neg_ids_list, neg_mask_list = [], []
-        candidates = [g for g in random.sample(self.neg_genes, min(self.K * 3, len(self.neg_genes)))
+        candidates = [g for g in random.sample(self.neg_genes, min(self.K * 2, len(self.neg_genes)))
                        if g != target_gene][:self.K]
         # pad if not enough candidates
         while len(candidates) < self.K:
@@ -434,7 +467,7 @@ class SpecificityTrainer:
         self.discriminator.eval()
         emb_weight = self.discriminator.sn_embedding_weight
 
-        total_gen, total_spec = 0., 0.
+        total_loss, total_gen, total_spec = 0., 0., 0.
         total_p_on, total_p_off = 0., 0.
 
         for batch in dataloader:
@@ -460,6 +493,7 @@ class SpecificityTrainer:
 
             total_gen  += gen_loss.item()
             total_spec += spec_loss.item()
+            total_loss += self.alpha * gen_loss.item() + self.beta * spec_loss.item()
             total_p_on  += p_on
             total_p_off += p_off
 
@@ -467,6 +501,7 @@ class SpecificityTrainer:
         return {
             "gen_loss":  total_gen / n,
             "spec_loss": total_spec / n,
+            "loss":      total_loss / n,
             "p_on":      total_p_on / n,
             "p_off":     total_p_off / n,
         }
@@ -481,6 +516,8 @@ class SpecificityTrainer:
         save_dir="checkpoints/specificity_gen",
         wandb_project: str = "Finetune_Specificity",
         wandb_run_name: str | None = None,
+        resume_path: str | None = None,
+        start_epoch: int = 0,
     ):
         os.makedirs(save_dir, exist_ok=True)
         self.generator.to(self.device)
@@ -505,8 +542,9 @@ class SpecificityTrainer:
                 "patience": patience,
                 "train_samples": len(train_loader.dataset),
                 "val_samples": len(val_loader.dataset),
+                "resumed_from": resume_path or "none",
             },
-            tags=["generator", "specificity", "eCLIP", "phase2"],
+            tags=["generator", "specificity", "Manakov2022_train", "phase2"],
             save_code=False,
             job_type="train",
         )
@@ -518,12 +556,38 @@ class SpecificityTrainer:
         warmup = LinearLR(self.optimizer, start_factor=0.01, end_factor=1.0, total_iters=warmup_steps)
         cosine = CosineAnnealingLR(self.optimizer, T_max=total_steps - warmup_steps, eta_min=1e-7)
         scheduler = SequentialLR(self.optimizer, [warmup, cosine], milestones=[warmup_steps])
-        print(f"Scheduler: {warmup_steps} warmup, {total_steps} total steps\n")
 
-        best_spec_loss = float("inf")
+        # ── Resume from checkpoint ────────────────────────────────────
+        best_loss = float("inf")
         counter = 0
 
-        for epoch in range(epochs):
+        if resume_path and os.path.isfile(resume_path):
+            ckpt = torch.load(resume_path, map_location=self.device)
+            if isinstance(ckpt, dict) and "generator_state_dict" in ckpt:
+                self.generator.gen_model.load_state_dict(ckpt["generator_state_dict"])
+                self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+                scheduler.load_state_dict(ckpt["scheduler_state_dict"])
+                start_epoch = ckpt["epoch"] + 1
+                best_loss = ckpt.get("best_loss", float("inf"))
+                counter = ckpt.get("patience_counter", 0)
+                print(f"Resumed full training state from {resume_path} (epoch {ckpt['epoch']})")
+            else:
+                missing, unexpected = self.generator.gen_model.load_state_dict(ckpt, strict=False)
+                print(f"Resumed model weights from {resume_path}")
+                if missing:
+                    print(f"  Missing: {missing}")
+                if unexpected:
+                    print(f"  Unexpected: {unexpected}")
+                # Advance scheduler to correct position
+                skip_steps = start_epoch * steps_per_epoch
+                for _ in range(skip_steps):
+                    scheduler.step()
+                print(f"  Advanced scheduler by {skip_steps} steps to epoch {start_epoch}")
+
+        print(f"Scheduler: {warmup_steps} warmup, {total_steps} total steps")
+        print(f"Training epochs {start_epoch}..{epochs - 1}\n")
+
+        for epoch in range(start_epoch, epochs):
             tm = self.train_epoch(train_loader, epoch, accumulation_step, scheduler)
             vm = self.evaluate(val_loader)
 
@@ -532,7 +596,7 @@ class SpecificityTrainer:
                 f"  Epoch {epoch}\n"
                 f"  Train: loss={tm['loss']:.4f}  gen={tm['gen_loss']:.4f}  "
                 f"spec={tm['spec_loss']:.4f}  p_on={tm['p_on']:.3f}  p_off={tm['p_off']:.3f}\n"
-                f"  Val:   gen={vm['gen_loss']:.4f}  spec={vm['spec_loss']:.4f}  "
+                f"  Val:   loss={vm['loss']:.4f}  gen={vm['gen_loss']:.4f}  spec={vm['spec_loss']:.4f}  "
                 f"p_on={vm['p_on']:.3f}  p_off={vm['p_off']:.3f}\n"
                 f"{'═'*65}\n",
                 flush=True,
@@ -545,6 +609,7 @@ class SpecificityTrainer:
                 "train/spec_loss": tm["spec_loss"],
                 "train/p_on": tm["p_on"],
                 "train/p_off": tm["p_off"],
+                "eval/loss": vm["loss"],
                 "eval/gen_loss": vm["gen_loss"],
                 "eval/spec_loss": vm["spec_loss"],
                 "eval/p_on": vm["p_on"],
@@ -553,11 +618,18 @@ class SpecificityTrainer:
             }, step=epoch)
 
             # Track val specificity loss (lower = better on-target, less off-target)
-            if vm["spec_loss"] < best_spec_loss:
-                best_spec_loss = vm["spec_loss"]
+            if vm["loss"] < best_loss:
+                best_loss = vm["loss"]
                 counter = 0
-                path = os.path.join(save_dir, f"best_spec_{best_spec_loss:.4f}_epoch{epoch}.pth")
-                torch.save(self.generator.gen_model.state_dict(), path)
+                path = os.path.join(save_dir, f"best_loss_{best_loss:.4f}_epoch{epoch}.pth")
+                torch.save({
+                    "generator_state_dict": self.generator.gen_model.state_dict(),
+                    "optimizer_state_dict": self.optimizer.state_dict(),
+                    "scheduler_state_dict": scheduler.state_dict(),
+                    "epoch": epoch,
+                    "best_loss": best_loss,
+                    "patience_counter": counter,
+                }, path)
                 print(f"  ★ Saved → {path}")
             else:
                 counter += 1
@@ -566,7 +638,7 @@ class SpecificityTrainer:
                     break
 
         wandb.finish()
-        return best_spec_loss
+        return best_loss
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -584,27 +656,29 @@ if __name__ == "__main__":
     GEN_FF_DIM        = 4096
     GEN_VOCAB_SIZE    = 13
     GEN_N_CLASSES     = 13
+    USE_LONGFORMER    = True
 
     # Discriminator architecture (must match finetuned checkpoint)
-    DISC_EMBED_DIM     = 1024
-    DISC_NUM_HEADS     = 8
-    DISC_NUM_LAYERS    = 4
-    DISC_FF_DIM        = 4096
+    DISC_EMBED_DIM     = 256
+    DISC_NUM_HEADS     = 2
+    DISC_NUM_LAYERS    = 2
+    DISC_FF_DIM        = 512
     DISC_VOCAB_SIZE    = 12
 
     # Training
     BATCH_SIZE    = 32
     LR            = 3e-5
     SEED          = 10020
-    DEVICE        = "cuda:3"
-    EPOCHS        = 20         
+    DEVICE        = "cuda:0"
+    EPOCHS        = 9
     ACCUM_STEPS   = 8
-    PATIENCE      = 15
+    PATIENCE      = 10
     ALPHA         = 0.5      # generation loss weight
     BETA          = 0.7      # specificity loss weight
     LAMBDA        = 0.5      # off-target penalty
     TAU           = 0.5      # soft embedding temperature
     K_NEG         = 5       # negative mRNAs per sample
+    START_EPOCH   = 1       # start from epoch 0 if not resuming
 
     # ── Paths ─────────────────────────────────────────────────────────────
     GEN_CKPT = os.path.join(
@@ -614,10 +688,15 @@ if __name__ == "__main__":
     )
     DISC_CKPT = os.path.join(
         PROJ_HOME,
-        "checkpoints/discriminator_finetuned/"
-        "best_auroc_0.7936_epoch3.pth"
+        "checkpoints/TargetScan/TwoTowerTransformer/CNN-tokenized/Manakov2022_train/50/",
+        "best_binding_aps_0.8357_epoch14.pth"
     )
-    ECLIP_DATA = os.path.join(PROJ_HOME, "AGO2_eCLIP_Manakov2022_test.tsv.gz")
+    RESUME_CKPT = os.path.join(
+        PROJ_HOME,
+        "checkpoints/specificity_gen/Manakov2022_train/",
+        "best_spec_0.6128_epoch0.pth"
+    )
+    ECLIP_DATA = os.path.join(PROJ_HOME, "AGO2_eCLIP_Manakov2022_train.tsv.gz")
 
     # ── 1. Build & load Generator ─────────────────────────────────────────
     gen_model = TargetGenerationModel(
@@ -626,7 +705,7 @@ if __name__ == "__main__":
         num_layers=GEN_NUM_LAYERS, ff_dim=GEN_FF_DIM,
         batch_size=BATCH_SIZE, vocab_size=GEN_VOCAB_SIZE,
         n_classes=GEN_N_CLASSES, lr=LR, seed=SEED, device=DEVICE,
-        use_longformer=True,
+        use_longformer=USE_LONGFORMER,
     )
     gen_ckpt = torch.load(GEN_CKPT, map_location=DEVICE)
     model_sd = gen_model.state_dict()
@@ -644,18 +723,11 @@ if __name__ == "__main__":
         vocab_size=DISC_VOCAB_SIZE, num_layers=DISC_NUM_LAYERS,
         embed_dim=DISC_EMBED_DIM, num_heads=DISC_NUM_HEADS,
         ff_dim=DISC_FF_DIM, hidden_sizes=[DISC_FF_DIM, DISC_FF_DIM],
-        n_classes=1, dropout_rate=0.2, device=DEVICE,
+        n_classes=1, dropout_rate=0.1, device=DEVICE,
         predict_span=False, predict_binding=True, predict_cleavage=False,
-        use_longformer=True,
+        use_longformer=False,
     )
-    disc_ckpt = torch.load(DISC_CKPT, map_location=DEVICE)
-    disc_sd = disc_model.state_dict()
-    filtered_d = {k: v for k, v in disc_ckpt.items()
-                  if k in disc_sd and v.shape == disc_sd[k].shape}
-    disc_model.load_state_dict(filtered_d, strict=False)
-    print(f"Loaded Discriminator from {DISC_CKPT}  "
-          f"({len(filtered_d)}/{len(disc_ckpt)} tensors, "
-          f"{len(disc_ckpt) - len(filtered_d)} skipped due to shape mismatch)")
+    disc_model = load_discriminator_checkpoint(disc_model, DISC_CKPT, DEVICE)
     discriminator = FrozenDiscriminator(disc_model)
 
     # ── 3. Prepare data ──────────────────────────────────────────────────
@@ -713,7 +785,9 @@ if __name__ == "__main__":
     best = trainer.run(
         train_loader, val_loader,
         epochs=EPOCHS, accumulation_step=ACCUM_STEPS, patience=PATIENCE,
-        save_dir=os.path.join(PROJ_HOME, "checkpoints", "specificity_gen"),
-        wandb_run_name="80nt-Finetune-Specificity",
+        save_dir=os.path.join(PROJ_HOME, "checkpoints", "specificity_gen", "Manakov2022_train"),
+        wandb_run_name="80nt-Finetune-Specificity-discriminator-on-Manakov2022_train",
+        resume_path=RESUME_CKPT,
+        start_epoch = START_EPOCH
     )
     print(f"\nDone. Best specificity loss = {best:.4f}")
