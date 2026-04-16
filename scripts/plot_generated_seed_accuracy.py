@@ -1,3 +1,6 @@
+'''
+This script plots the 
+'''
 import os
 import math
 from pathlib import Path

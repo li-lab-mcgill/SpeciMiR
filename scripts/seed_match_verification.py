@@ -166,8 +166,6 @@ def plot_seed_match_distribution(data, plot_path):
     fig.savefig(plot_path, dpi=400, bbox_inches="tight")
     print("Seed match distribution plot saved to: ", plot_path)
 
-print("Plots saved successfully.")
-
 if __name__ == "__main__":
     # read in the dataset
     data_dir = os.path.join(PROJ_HOME, "TargetScan_dataset")
@@ -195,7 +193,7 @@ if __name__ == "__main__":
     for index, row in data_30nt.iterrows():
         mrna_seq = row["mRNA sequence"]
         mirna_seq = row["generated_mirna"]
-        found, m_type, _, _ = verify_anywhere_seed_matches(mrna_seq, mirna_seq)
+        found, m_type, _, _ = verify_anywhere_seed_matches(mrna_seq, mirna_seq) # can switch to verify_seed_matches for exact seed matches at 2-8nt
         if found:
             if m_type == "6-mer":
                 valid_6mers_30nt += 1
@@ -225,7 +223,7 @@ if __name__ == "__main__":
     for index, row in data_100nt.iterrows():
         mrna_seq = row["mRNA sequence"]
         mirna_seq = row["generated_mirna"]
-        found, m_type, _,_ = verify_anywhere_seed_matches(mrna_seq, mirna_seq)
+        found, m_type, _,_ = verify_anywhere_seed_matches(mrna_seq, mirna_seq) # can switch to verify_seed_matches for exact seed matches at 2-8nt
         if found:
             if m_type == "6-mer":
                 valid_6mers_100nt += 1
@@ -255,7 +253,7 @@ if __name__ == "__main__":
     for index, row in data_500nt.iterrows():
         mrna_seq = row["mRNA sequence"]
         mirna_seq = row["generated_mirna"]
-        found, m_type, _, _ = verify_anywhere_seed_matches(mrna_seq, mirna_seq)
+        found, m_type, _, _ = verify_anywhere_seed_matches(mrna_seq, mirna_seq) # can switch to verify_seed_matches for exact seed matches at 2-8nt
         if found:
             if m_type == "6-mer":
                 valid_6mers_500nt += 1

@@ -10,6 +10,7 @@ Degradome_dataset/
 TarBase_dataset/
 miR_degradome_ago_clip_pairing_data/
 *.tsv.gz
+*.csv.gz
 
 # logs
 output_logs/
@@ -50,3 +51,4 @@ span_metrics.txt
 *.md
 unused_data.tar.gz
 HyenaDNA_scripts/
+slurm_jobs/

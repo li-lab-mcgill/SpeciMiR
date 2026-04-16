@@ -496,7 +496,7 @@ class MultiHeadAttention(nn.Module):
             # If mask is (B, 1, Q, K), it broadcasts to (B, H, Q, K)
             
             mask = mask.expand(-1, self.num_heads, Q.shape[2], -1) # (batchsize, num_heads, q_len, k_len)
-            mask = mask.to(self.device)
+            mask = mask.to(scores.device)
             scores = scores.masked_fill(mask==0, float("-inf"))
         attention = F.softmax(scores, dim=-1)
         self.last_attention = attention.detach().cpu()
@@ -2193,7 +2193,7 @@ class TargetGenerationModel(nn.Module):
         )
         return avg_loss, avg_token_accuracy
 
-    def greedy_generate(self, model, mrna_tokens, max_len=40):
+    def greedy_generate(self, model, device, mrna_tokens, max_len=40):
         """
         src_tokens: (1, L_src) single example
         Returns a list of token ids for the generated miRNA (excluding BOS).
@@ -2203,7 +2203,7 @@ class TargetGenerationModel(nn.Module):
 
         with torch.no_grad():
             # Encode mRNA once
-            mrna_mask = self.create_src_mask(mrna_tokens).to(model.device)  # (B, L_mrna)
+            mrna_mask = self.create_src_mask(mrna_tokens).to(device)  # (B, L_mrna)
             
             mrna_sn_embedding = model.sn_embedding(mrna_tokens)
             mrna_cnn_embedding = model.cnn_embedding(mrna_sn_embedding.transpose(-1, -2))
@@ -2240,13 +2240,13 @@ class TargetGenerationModel(nn.Module):
                 (batch_size, 1), 
                 model.bos_idx, 
                 dtype=torch.long, 
-                device=model.device
+                device=device
             )
-            finished = torch.zeros(batch_size, dtype=torch.bool, device=model.device)
+            finished = torch.zeros(batch_size, dtype=torch.bool, device=device)
             for _ in range(max_len):
                 tgt_input = generated
                 tgt_mask = self.create_tgt_mask(tgt_input)
-                tgt_mask = tgt_mask.to(model.device)
+                tgt_mask = tgt_mask.to(device)
 
                 mirna_sn_embedding = model.sn_embedding(tgt_input)
                 tgt_embedding = mirna_sn_embedding
@@ -2366,7 +2366,7 @@ class TargetGenerationModel(nn.Module):
             valid_path="",
             test_path="",
             ckpt_path=None,
-            evaluation=False,
+            evaluate=False,
             predict=False,
             finetune=False,
             accumulation_step=1,
@@ -2384,28 +2384,18 @@ class TargetGenerationModel(nn.Module):
                 loaded_data = torch.load(ckpt_path, map_location=model.device)
                 current_state = model.state_dict()
                 encoder_state = {}
-                for key, value in loaded_data.items():
-                    if key not in current_state:
-                        continue
-                    # Rotary buffers: either skip (recommended) or copy if shape matches
-                    if ("rotary.cos_emb" in key) or ("rotary.sin_emb" in key):
-                        if value.shape == current_state[key].shape:
-                            encoder_state[key] = value
-                        else:
-                            print(f"Dropping mismatched key {key}: checkpoint {value.shape}, model {current_state[key].shape}")
-                            continue
-                    else:
-                        encoder_state[key] = value
-                model.load_state_dict(encoder_state, strict=False)
-
+                missing, unexpected = model.load_state_dict(loaded_data, strict=False)
                 print(f"Loaded checkpoint from {ckpt_path}")
-                
+                print(f"Missing keys: {missing}")
+                print(f"Unexpected keys: {unexpected}")
+            
             model.to(self.device)
 
             all_generated_seqs = []
             for batch in test_loader:
                 mrna_tokens = batch["mrna_input_ids"].to(self.device)
                 generated = self.greedy_generate(model=model, 
+                                                device=self.device,
                                                 mrna_tokens=mrna_tokens, 
                                                 max_len=self.mirna_max_len)
                 # Decode
@@ -2415,7 +2405,7 @@ class TargetGenerationModel(nn.Module):
                     all_generated_seqs.append(decoded)
 
             D_test["generated_mirna"] = all_generated_seqs
-            save_path = os.path.join(os.path.dirname(test_path), f"generated_mirna_positive_samples_30_randomized_start_test.csv")
+            save_path = os.path.join(os.path.dirname(test_path), f"generated_AGO2_eCLIP_Manakov2022_test.csv")
             D_test.to_csv(save_path, index=False)
             print(f"Generated mirna saved to {save_path}")
         else:
@@ -2512,62 +2502,63 @@ class TargetGenerationModel(nn.Module):
 
 if __name__ == "__main__":
     torch.cuda.empty_cache() # clear crashed cache
-    mrna_max_len = 520 
+    mrna_max_len = 80 
     mirna_max_len = 24
     train_datapath = os.path.join(PROJ_HOME, "TargetScan_dataset/Positive_primates_train_500_randomized_start.csv")
     valid_datapath = os.path.join(PROJ_HOME, "TargetScan_dataset/Positive_primates_validation_500_randomized_start.csv")
-    test_datapath  = os.path.join(PROJ_HOME, "TargetScan_dataset/positive_samples_30_randomized_start_test.csv")
-    ckpt_path = os.path.join(PROJ_HOME, "checkpoints/TargetScan/TwoTowerTransformer/CNN-tokenized/TargetGeneration/30/best_token_accuracy_0.9554_epoch19.pth")
+    test_datapath  = os.path.join(PROJ_HOME, "Manakov2022/AGO2_eCLIP_Manakov2022_test.tsv.gz")
+    ckpt_path = os.path.join(PROJ_HOME, "checkpoints/specificity_gen/Manakov2022_train/best_loss_0.5900_epoch1.pth")
 
     # train target generation model
-    # model = TargetGenerationModel(mrna_max_len=mrna_max_len,
-    #                               mirna_max_len=mirna_max_len,
-    #                               device='cuda:1',
-    #                               embed_dim=1024,
-    #                               num_heads=8,
-    #                               num_layers=4,
-    #                               ff_dim=4096,
-    #                               batch_size=64,
-    #                               vocab_size=13,
-    #                               n_classes=13,
-    #                               lr=3e-5,
-    #                               seed=10020,
-    #                               use_longformer=True,)
-    # model.run(model=model,
-    #           train_path=train_datapath,
-    #           valid_path=valid_datapath,
-    #           test_path =test_datapath,
-    #           evaluation=False,
-    #           predict=True,
-    #           finetune=False,
-    #           accumulation_step=4,
-    #           epochs=20,
-    #           ckpt_path=ckpt_path,)
-    
-
-    model = DTEA(mrna_max_len=mrna_max_len,
-                mirna_max_len=mirna_max_len,
-                device="cuda:0",
-                epochs=100,
-                embed_dim=1024,
-                num_heads=8,
-                num_layers=4,
-                ff_dim=4096,
-                batch_size=32,
-                lr=3e-5,
-                seed=10020,
-                predict_span=False,
-                predict_binding=False,
-                predict_cleavage=True,
-                use_longformer=True)
-    # total_params = sum(param.numel() for param in model.parameters())
-    # print(f"Total Parameters: {total_params}")
-    # trainable_params = [p for p in model.parameters() if p.requires_grad]
-    # print(f"Total trainable parameters = ", len(trainable_params))
+    model = TargetGenerationModel(mrna_max_len=mrna_max_len,
+                                  mirna_max_len=mirna_max_len,
+                                  device='cuda:0',
+                                  embed_dim=1024,
+                                  num_heads=8,
+                                  num_layers=4,
+                                  ff_dim=4096,
+                                  batch_size=32,
+                                  vocab_size=13,
+                                  n_classes=13,
+                                  lr=3e-5,
+                                  seed=10020,
+                                  use_longformer=True,)
     model.run(model=model,
               train_path=train_datapath,
               valid_path=valid_datapath,
-              accumulation_step=8,
-              training_mode="SPAN",
-              ckpt_path=ckpt_path
-            )
+              test_path =test_datapath,
+              evaluate=False,
+              predict=False,
+              finetune=False,
+              accumulation_step=4,
+              epochs=20,
+              ckpt_path=ckpt_path,
+              )
+    
+
+    # model = DTEA(mrna_max_len=mrna_max_len,
+    #             mirna_max_len=mirna_max_len,
+    #             device="cuda:0",
+    #             epochs=100,
+    #             embed_dim=1024,
+    #             num_heads=8,
+    #             num_layers=4,
+    #             ff_dim=4096,
+    #             batch_size=32,
+    #             lr=3e-5,
+    #             seed=10020,
+    #             predict_span=False,
+    #             predict_binding=False,
+    #             predict_cleavage=True,
+    #             use_longformer=True)
+    # # total_params = sum(param.numel() for param in model.parameters())
+    # # print(f"Total Parameters: {total_params}")
+    # # trainable_params = [p for p in model.parameters() if p.requires_grad]
+    # # print(f"Total trainable parameters = ", len(trainable_params))
+    # model.run(model=model,
+    #           train_path=train_datapath,
+    #           valid_path=valid_datapath,
+    #           accumulation_step=8,
+    #           training_mode="SPAN",
+    #           ckpt_path=ckpt_path
+    #         )
