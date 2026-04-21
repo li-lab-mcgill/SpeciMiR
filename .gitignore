@@ -9,6 +9,9 @@ TargetScan_dataset/
 Degradome_dataset/
 TarBase_dataset/
 miR_degradome_ago_clip_pairing_data/
+Manakov2022/
+Hejret2023/
+Klimentova2022/
 *.tsv.gz
 *.csv.gz
 

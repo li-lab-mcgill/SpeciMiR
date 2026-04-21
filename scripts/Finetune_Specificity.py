@@ -518,6 +518,7 @@ class SpecificityTrainer:
         wandb_run_name: str | None = None,
         resume_path: str | None = None,
         start_epoch: int = 0,
+        tags: list[str] = [],
     ):
         os.makedirs(save_dir, exist_ok=True)
         self.generator.to(self.device)
@@ -544,7 +545,7 @@ class SpecificityTrainer:
                 "val_samples": len(val_loader.dataset),
                 "resumed_from": resume_path or "none",
             },
-            tags=["generator", "specificity", "Manakov2022_train", "phase2"],
+            tags=["generator", "specificity", "Manakov2022_train"] + tags,
             save_code=False,
             job_type="train",
         )
@@ -561,7 +562,7 @@ class SpecificityTrainer:
         best_loss = float("inf")
         counter = 0
 
-        if resume_path and os.path.isfile(resume_path):
+        if resume_path is not None and os.path.exists(resume_path):
             ckpt = torch.load(resume_path, map_location=self.device)
             if isinstance(ckpt, dict) and "generator_state_dict" in ckpt:
                 self.generator.gen_model.load_state_dict(ckpt["generator_state_dict"])
@@ -622,6 +623,7 @@ class SpecificityTrainer:
                 best_loss = vm["loss"]
                 counter = 0
                 path = os.path.join(save_dir, f"best_loss_{best_loss:.4f}_epoch{epoch}.pth")
+                os.makedirs(os.path.dirname(path), exist_ok=True)
                 torch.save({
                     "generator_state_dict": self.generator.gen_model.state_dict(),
                     "optimizer_state_dict": self.optimizer.state_dict(),
