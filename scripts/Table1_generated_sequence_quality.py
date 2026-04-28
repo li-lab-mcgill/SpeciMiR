@@ -74,21 +74,22 @@ def eval_seed_match_rate(dataset, mirna_col="generated_mirna"):
 
 def main():
     # ─── Configuration ────────────────────────────────────────────────────────────
-    MRNA_MAX_LEN = 80
-    MIRNA_MAX_LEN = 26 # 24 + 2
-    BATCH_SIZE = 64
-    DEVICE = "cuda:4"
-    SEED = 42
-    EMBED_DIM = 1024
-    NUM_HEADS = 8
-    NUM_LAYERS = 4
-    FF_DIM = 4096
-    USE_LONGFORMER = True
-    # save_path = None
-    save_path = os.path.join(PROJ_HOME, "Manakov2022/AGO2_eCLIP_Manakov2022_test_predicted.csv.gz")
+    # MRNA_MAX_LEN = 80
+    # MIRNA_MAX_LEN = 26 # 24 + 2
+    # BATCH_SIZE = 64
+    # DEVICE = "cuda:4"
+    # SEED = 42
+    # EMBED_DIM = 1024
+    # NUM_HEADS = 8
+    # NUM_LAYERS = 4
+    # FF_DIM = 4096
+    # USE_LONGFORMER = True
+    # # save_path = None
+    save_path = os.path.join(PROJ_HOME, "Manakov2022/ablation_study/alpha_0.5_beta_0.7_lambda_0.0/AGO2_eCLIP_Manakov2022_test_predicted.tsv.gz")
+    # os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
     # datapath = os.path.join(PROJ_HOME, "Manakov2022/AGO2_eCLIP_Manakov2022_test.tsv.gz")
-    # ckpt_path = os.path.join(PROJ_HOME, "checkpoints/specificity_gen/Manakov2022_train/best_loss_0.5440_epoch6.pth")
+    # ckpt_path = os.path.join(PROJ_HOME, "checkpoints/specificity_gen/Manakov2022_train/ablation_study/alpha_0.5_beta_0.7_lambda_0.0/best_loss_0.3539_epoch1.pth")
     
     # dataset = pd.read_csv(datapath, compression="gzip", sep="\t")
     # # filter for only target mRNAs
@@ -144,11 +145,11 @@ def main():
     #     print(f"Generated mirna saved to {save_path}")
 
     # --------Evaluate the quality of the generated miRNA sequences --------
-    dataset_path = os.path.join(PROJ_HOME, "Manakov2022/AGO2_eCLIP_Manakov2022_test_predicted.csv.gz")
+    dataset_path = os.path.join(PROJ_HOME, "Manakov2022/ablation_study/alpha_0.5_beta_0.7_lambda_0.0/AGO2_eCLIP_Manakov2022_test_predicted.tsv.gz")
     dataset = pd.read_csv(dataset_path, compression="gzip", sep="\t")
-    # 1. Token-level accuracy
-    # compare the generated miRNA sequences with the true miRNA sequences token-by-token
-    # avg_token_accuracy = eval_token_accuracy(dataset)
+    # # 1. Token-level accuracy
+    # # compare the generated miRNA sequences with the true miRNA sequences token-by-token
+    # # avg_token_accuracy = eval_token_accuracy(dataset)
 
     # 2. Sequence diversity
     # % of unique sequences generated / total generated sequences

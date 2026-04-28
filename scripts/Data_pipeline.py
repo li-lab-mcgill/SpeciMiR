@@ -553,7 +553,7 @@ class TargetPredictionDataset(torch.utils.data.Dataset):
 
         # Tokenize mirna
         mirna_seq = mirna_seq.replace("U", "T")
-        mirna_seq = mirna_seq[::-1]
+        mirna_seq = mirna_seq[::-1] # 3' to 5'
         mirna_encoded = self.tokenizer(
             mirna_seq,
             add_special_tokens=False,
