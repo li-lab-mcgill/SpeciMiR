@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+from Global_parameters import PROJ_HOME
 
-PROJ_HOME = os.path.expanduser("~/projects/mirLM")
 data_dir = os.path.join(PROJ_HOME, "TargetScan_dataset")
 predicted_targets_f = "Mouse_Predicted_Targets_Context_Scores.default_predictions.txt.zip"
 
