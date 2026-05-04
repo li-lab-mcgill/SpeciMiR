@@ -1,7 +1,7 @@
 import os
 import pandas as pd
+from Global_parameters import PROJ_HOME
 
-PROJ_HOME = os.path.expanduser("/home/claris/projects/ctb-liyue/claris/projects/mirLM")
 targetscan_data_dir = os.path.join(PROJ_HOME, "TargetScan_dataset")
 degradome_data_dir = os.path.join(PROJ_HOME, "miR_degradome_ago_clip_pairing_data")
 predicted_targets_f = "Human_Predicted_Targets_Context_Scores.default_predictions.txt.zip"
