@@ -1,6 +1,6 @@
-# MiRformer: a dual-transformer encoder framework for predicting miRNA-mRNA interactions
+# SpeciMiR---Target-Conditioned-MicroRNA-Synthesis-via-Specificity-Guided-Transformers
 
-This repository contains the code for `MiRformer`, a deep learning model for predicting miRNA-mRNA interactions using dual-transformer encoder architecture.
+This repository contains the code for `SpeciMiR`, a deep learning model for predicting miRNA-mRNA interactions using dual-transformer encoder architecture.
 
 ## Command-line Usage
 
