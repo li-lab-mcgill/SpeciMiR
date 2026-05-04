@@ -28,7 +28,7 @@ import statistics
 import csv
 from collections import defaultdict
 
-RNAHYBRID_BIN = "/home/mcb/users/jgu13/.conda/envs/rnahybrid/bin/RNAhybrid"
+RNAHYBRID_BIN = "path/to/rnahybrid/bin/RNAhybrid"
 
 
 def run_rnahybrid(mirna_seq: str, mrna_seq: str, rnahybrid_bin: str,
