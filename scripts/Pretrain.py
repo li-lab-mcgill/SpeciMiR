@@ -29,11 +29,7 @@ from wandb.sdk.wandb_settings import Settings
 from ckpt_utils import (
     latest_checkpoint, save_training_state, load_training_state, GracefulKiller, is_rank0
 )
-
-
-# PROJ_HOME = os.path.expanduser("~/projects/ctb-liyue/claris/projects/mirLM")
-PROJ_HOME = os.path.expanduser("~/projects/mirLM")
-# PROJ_HOME = os.path.expanduser("/Users/jiayaogu/Documents/Li Lab/mirLM---Micro-RNA-generation-with-mRNA-prompt/")
+from Global_parameters import PROJ_HOME
 
 def setup(rank, world_size, seed=42):
     """Initialize the process group for distributed training."""
@@ -510,7 +506,7 @@ def run_ddp(rank, world_size, epochs,
 
     # Initialize wandb only on rank 0
     if rank == 0:
-        wandb.login(key="600e5cca820a9fbb7580d052801b3acfd5c92da2")
+        wandb.login(key="your key")
         wandb.init(
             project="mirna-pretraining",
             name=f"Pretrain_DDP:{mrna_max_len}-epoch:{epochs}-gpus:{world_size}", 
