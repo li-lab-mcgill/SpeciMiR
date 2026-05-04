@@ -16,7 +16,7 @@ import os
 import pandas as pd
 from Bio import Entrez, SeqIO
 
-Entrez.email = "jia.gu@mail.mcgill.ca" 
+Entrez.email = "your email" 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 1.  FDA siRNA data from Traber & Yu 2024, Table 2
