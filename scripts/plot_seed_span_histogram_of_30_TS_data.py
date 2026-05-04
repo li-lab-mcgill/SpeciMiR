@@ -1,8 +1,8 @@
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+from Global_parameters import PROJ_HOME
 
-PROJ_HOME = os.path.expanduser("~/projects/mirLM")
 data_dir  = os.path.join(PROJ_HOME, "TargetScan_dataset")
 df = pd.read_csv(os.path.join(data_dir,  
                               "positive_samples_30_randomized_start.csv"), 
