@@ -9,8 +9,8 @@ from single_base_perturbation import predict, encode_seq, single_base_perturbati
 from plot_transformer_heatmap import plot_heatmap
 from Data_pipeline import CharacterTokenizer
 import DTEA_model as dtea
+from Global_parameters import PROJ_HOME
 
-PROJ_HOME = os.path.expanduser("~/projects/mirLM")
 data_dir = os.path.join(PROJ_HOME, "TargetScan_dataset")
 
 def load_model(ckpt_path,
