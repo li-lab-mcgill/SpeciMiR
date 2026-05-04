@@ -301,7 +301,7 @@ def main():
     data_dir = os.path.join(PROJ_HOME, 'TargetScan_dataset')
     test_datapath = os.path.join(PROJ_HOME, data_dir, 
                                  "TargetScan_train_500_randomized_start.csv")
-    # test_datapath = os.path.join("/home/mcb/users/jgu13/projects/mirLM/TargetScan_dataset/Merged_primates_validation_500_randomized_start.csv") 
+    test_datapath = os.path.join(PROJ_HOME, "TargetScan_dataset/Merged_primates_validation_500_randomized_start.csv") 
     test_data  = pd.read_csv(test_datapath, sep=',')
     mRNA_seqs  = test_data[["mRNA sequence"]].values
     miRNA_seqs = test_data[["miRNA sequence"]].values
