@@ -8,6 +8,7 @@ import os
 import pandas as pd
 import sys
 import random
+from Global_parameters import PROJ_HOME
 
 def get_window_len_mrna(mRNA_seq, window_len, seed_start, seed_end):
     """
@@ -124,8 +125,7 @@ def main():
     """Main function to process both datasets and create merged output."""
     
     # Set up paths
-    base_dir = "/home/claris/projects/ctb-liyue/claris/projects/mirLM"
-    tarbase_dir = os.path.join(base_dir, "TarBase_dataset")
+    tarbase_dir = os.path.join(PROJ_HOME, "TarBase_dataset")
     
     human_file = os.path.join(tarbase_dir, "sampled_canonical_human_microT.tsv")
     mouse_file = os.path.join(tarbase_dir, "sampled_canonical_mouse_microT.tsv")
