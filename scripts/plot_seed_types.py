@@ -3,23 +3,22 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# PROJ_HOME = os.path.expanduser("~/projects/mirLM")
-# data_dir = os.path.join(PROJ_HOME, "TargetScan_dataset")
-# predicted_targets_f = "Mouse_Predicted_Targets_Context_Scores.default_predictions.txt.zip"
+PROJ_HOME = os.path.expanduser("~/projects/mirLM")
+data_dir = os.path.join(PROJ_HOME, "TargetScan_dataset")
+predicted_targets_f = "Mouse_Predicted_Targets_Context_Scores.default_predictions.txt.zip"
 
-# # positive miRNA and mRNA pairs
-# path = os.path.join(data_dir, predicted_targets_f)
-# predicted_targets = pd.read_csv(path, sep='\t', compression="zip")
-# # filter for human (9606), chimpanzee (9598), mouse (10090)
-# tax_ids = [10090]
-# top_predicted_targets = predicted_targets[
-#     (predicted_targets["Gene Tax ID"].isin(tax_ids)) &
-#     (predicted_targets["context++ score percentile"] >= np.int64(80)) # top 20% likely pairs
-#     ]
-# # filter out non-canonical sites
-# top_predicted_targets = top_predicted_targets.loc[~top_predicted_targets["Site Type"].isin([-2,-3])]
+# positive miRNA and mRNA pairs
+path = os.path.join(data_dir, predicted_targets_f)
+predicted_targets = pd.read_csv(path, sep='\t', compression="zip")
+# filter for human (9606), chimpanzee (9598), mouse (10090)
+tax_ids = [10090]
+top_predicted_targets = predicted_targets[
+     (predicted_targets["Gene Tax ID"].isin(tax_ids)) &
+     (predicted_targets["context++ score percentile"] >= np.int64(80)) # top 20% likely pairs
+     ]
+# filter out non-canonical sites
+top_predicted_targets = top_predicted_targets.loc[~top_predicted_targets["Site Type"].isin([-2,-3])]
 # filter for miRNA in training data
-PROJ_HOME = os.path.expanduser("~/projects/ctb-liyue/claris/projects/mirLM")
 data_dir = os.path.join(PROJ_HOME, "TarBase_dataset")
 data_path = os.path.join(data_dir, "microT_human_geq_0.85.tsv")
 # mouse_data_path = os.path.join(data_dir, "mouse_positive_samples_30_randomized_start.csv")
