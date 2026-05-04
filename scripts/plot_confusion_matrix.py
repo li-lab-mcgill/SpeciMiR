@@ -2,9 +2,9 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from Global_parameters import PROJ_HOME
 
 # 1. 读取 CSV（替换为你的文件路径）
-PROJ_HOME = os.path.expanduser("~/projects/mirLM")
 df = pd.read_csv(os.path.join(PROJ_HOME, "Performance/TargetScan_test/TwoTowerTransformer/30/binding_span_predictions.csv"))
 
 df = df.loc[df["label"] == 1]
