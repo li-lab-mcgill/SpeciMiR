@@ -349,7 +349,7 @@ class DiscriminatorTrainer:
             self.model.to(self.device)
 
             # ── W&B init ──────────────────────────────────────────────────
-            wandb.login(key="600e5cca820a9fbb7580d052801b3acfd5c92da2")
+            wandb.login(key="your key")
             run = wandb.init(
                 project=wandb_project,
                 name=wandb_run_name or "500nt_discriminator-finetune-eCLIP",
