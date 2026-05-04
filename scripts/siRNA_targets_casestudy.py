@@ -371,9 +371,10 @@ for i, row in sirna_targets_df.iterrows():
         "gene": [target_mRNA],
     }
     on_target_mrnas_df = pd.DataFrame(on_target_mrnas)
+    print(f"--------Drug name: {drug_name}--------")
     # off_targets = off_target_df[off_target_df["drug_name"] == drug_name].sample(n=1000, random_state=42)
     # -----Check generated mirna is complementary to the target mRNA---
-    # display_biology_alignment(mrna_5to3=target_mRNA, mirna_3to5=generated_mirna_3to5)role for researchers who understand research problems from the inside and want to help shape the tools that millions of scientists use every day. 
+    display_biology_alignment(mrna_5to3=target_mRNA, mirna_3to5=generated_mirna_3to5)
     # -----Check thermodynamics of the generated miRNA and target mRNA-----
     # rnacofold_score = RNACofold_score(mirna_seq=generated_mirna_3to5, mrna_seq=target_mRNA)
     # rnacofold_score_fda = RNACofold_score(mirna_seq=fda_sirna, mrna_seq=target_mRNA)
@@ -382,7 +383,6 @@ for i, row in sirna_targets_df.iterrows():
     # check the percentage of energy of the generated miRNA to the ground truth siRNA
     # rnacofold_percentage_energy_change = (rnacofold_score / rnacofold_score_fda) * 100
     # rnahybrid_percentage_energy_change = (rnahybrid_score / rnahybrid_score_fda) * 100
-    print(f"--------Drug name: {drug_name}--------")
     # print(f"RNACofold score (generated): {rnacofold_score}")
     # print(f"RNAHybrid score (generated): {rnahybrid_score}")
     # print(f"Percentage of energy change (generated to FDA): {rnacofold_percentage_energy_change}%")
@@ -391,10 +391,10 @@ for i, row in sirna_targets_df.iterrows():
     # print(f"Percentage of energy change (generated to FDA): {rnahybrid_percentage_energy_change}%")
     # ------Check the specificity of the siRNA and the generated miRNA----
     # score with trained discriminator
-    discriminator_scores = discriminator_scorer.score_batch(batch=on_target_mrnas_df, mirna_col="generated_mirna", mrna_col="gene")
-    discriminator_scores_fda = discriminator_scorer.score_batch(batch=on_target_mrnas_df, mirna_col="noncodingRNA", mrna_col="gene")
-    print(f"Discriminator score (generated): {discriminator_scores}")
-    print(f"Discriminator score (FDA): {discriminator_scores_fda}")
+    # discriminator_scores = discriminator_scorer.score_batch(batch=on_target_mrnas_df, mirna_col="generated_mirna", mrna_col="gene")
+    # discriminator_scores_fda = discriminator_scorer.score_batch(batch=on_target_mrnas_df, mirna_col="noncodingRNA", mrna_col="gene")
+    # print(f"Discriminator score (generated): {discriminator_scores}")
+    # print(f"Discriminator score (FDA): {discriminator_scores_fda}")
     # score with RNACofold
     # rnacofold_scores = rnacofold_scorer.score_batch(batch=off_targets, mirna_col="generated_mirna", mrna_col="off_target_gene")
     # rnacofold_scores_fda = rnacofold_scorer.score_batch(batch=off_targets, mirna_col="noncodingRNA", mrna_col="off_target_gene")

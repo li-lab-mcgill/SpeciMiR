@@ -12,6 +12,7 @@ miR_degradome_ago_clip_pairing_data/
 Manakov2022/
 Hejret2023/
 Klimentova2022/
+siRNA_targets_data/
 *.tsv.gz
 *.csv.gz
 
