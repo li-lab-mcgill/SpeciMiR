@@ -1520,7 +1520,7 @@ class DTEA(nn.Module):
             loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
             optimizer = AdamW(model.parameters(), lr=self.lr)
 
-            # wandb.login(key="600e5cca820a9fbb7580d052801b3acfd5c92da2")
+            # wandb.login(key="your key")
             settings = Settings(
                 start_method="thread",   # avoid fork issues on HPC
                 init_timeout=180,        # give it more time
@@ -2410,7 +2410,7 @@ class TargetGenerationModel(nn.Module):
             print(f"Generated mirna saved to {save_path}")
         else:
             # weights and bias initialization
-            wandb.login(key="600e5cca820a9fbb7580d052801b3acfd5c92da2")
+            wandb.login(key="your key")
             wandb.init(
                 project="mirna-Generation",
                 name=f"{self.mrna_max_len}-epoch:{epochs}-batchsize:{self.batch_size}-4layerTrans-{self.ff_dim}MLP_hidden", 
