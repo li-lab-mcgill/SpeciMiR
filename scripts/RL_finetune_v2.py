@@ -107,7 +107,7 @@ VAL_BATCHES      = 100      # Issue 5: 100 × 32 = 3,200 samples
 PATIENCE         = 15
 DEVICE           = "cuda:0"
 SEED             = 42
-WANDB_KEY        = "600e5cca820a9fbb7580d052801b3acfd5c92da2"
+WANDB_KEY        = "your key"
 
 # ── Reward thresholds (piecewise, Issue 1) ─────────────────────────────────────
 SPEC_THRESH_EXCELLENT  = 15_000
