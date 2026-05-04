@@ -2,9 +2,9 @@ import os
 import pandas as pd
 import numpy as np
 import random
+from Global_parameters import PROJ_HOME
 
 # Define paths
-PROJ_HOME = os.path.expanduser("~/projects/mirLM")
 datadir = "miR_degradome_ago_clip_pairing_data"
 pairs = os.path.join(datadir, "paired_output_500_sequence.csv")
 out = os.path.join(datadir, "paired_500_randomized_start.csv")
