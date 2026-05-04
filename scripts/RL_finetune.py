@@ -108,7 +108,7 @@ VAL_BATCHES      = 10       # number of val batches per eval
 PATIENCE         = 10       # early stop after this many val evals without improvement
 DEVICE           = "cuda:0"
 SEED             = 42
-WANDB_KEY        = "600e5cca820a9fbb7580d052801b3acfd5c92da2"
+WANDB_KEY        = "your key"
 
 # ── Curriculum: (max_iter, reward_weights, entropy_coef) ──────────────────────
 # v2: Conservative curriculum — keep w_seed ≥ 0.5 to prevent seed-match degradation
