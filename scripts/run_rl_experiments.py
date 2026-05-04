@@ -59,7 +59,7 @@ KMER_INDEX_PATH = os.path.join(
 UTR3_FASTA = os.path.join(
     PROJ_HOME, "miR_degradome_ago_clip_pairing_data", "hg19_3UTR_extracted.fa"
 )
-RNADUPLEX_BIN = "/home/mcb/users/jgu13/.conda/envs/HyenaDNA_clone2/bin/RNAduplex"
+RNADUPLEX_BIN = "path/to/RNAduplex"
 
 DATA_FILES = {
     "30nt": os.path.join(
