@@ -1,4 +1,4 @@
-name: MiRformer
+name: SpeciMiR
 channels:
   - defaults
 dependencies:
