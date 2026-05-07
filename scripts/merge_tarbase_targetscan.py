@@ -12,7 +12,7 @@ def main():
     """Main function to split TarBase dataset and merge with TargetScan datasets."""
     
     # Set up paths
-    base_dir = "/home/claris/projects/ctb-liyue/claris/projects/mirLM"
+    base_dir = "path/to/proj_home"
     tarbase_dir = os.path.join(base_dir, "TarBase_dataset")
     targetscan_dir = os.path.join(base_dir, "TargetScan_dataset")
     
