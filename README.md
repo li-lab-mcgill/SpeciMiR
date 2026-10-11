@@ -2,6 +2,10 @@
 
 This repository contains the code for `MiRformer`, a deep learning model for predicting miRNA-mRNA interactions using dual-transformer encoder architecture.
 
+## Datasets availability
+
+All training, validation and testing data are available on [Zenodo](https://zenodo.org/records/23303444)
+
 ## Installation
 
 MiRformer uses a conda environment named `SpeciMiR`. The environment is Python 3.10.16 with PyTorch 2.5.1 built for CUDA 12.4. Install [Miniconda or Anaconda](https://docs.conda.io/en/latest/miniconda.html) first, and use an NVIDIA driver that supports CUDA 12.4.
